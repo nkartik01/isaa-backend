@@ -13,13 +13,18 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  avatar: {
-    type: String,
-  },
+  school: { type: String, required: true },
   date: {
     type: Date,
     default: Date.now,
   },
+  certs: [
+    {
+      uuid: { type: String, required: true },
+      count: { type: Number, required: true },
+      date: { type: Date, required: true },
+    },
+  ],
 });
 
 module.exports = User = mongoose.model("user", userSchema);
