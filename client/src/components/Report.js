@@ -14,7 +14,7 @@ class Report extends React.Component {
     data: [],
   };
   getPersonalStats = async () => {
-    var res = await axios.get("http://" + ip + ":5000/getPersonalReport", {
+    var res = await axios.get("/api/getPersonalReport", {
       headers: { "x-auth-token": localStorage.getItem("token") },
     });
     console.log(res.data);
@@ -43,7 +43,7 @@ class Report extends React.Component {
     // chart.render();
   };
   getSchoolStats = async () => {
-    var res = await axios.get("http://" + ip + ":5000/getSchoolReport/SCSE");
+    var res = await axios.get("/api/getSchoolReport/SCSE");
     res = res.data;
     console.log(res);
     var dates = Object.keys(res.date);
@@ -63,16 +63,16 @@ class Report extends React.Component {
       }
     }
     this.state.scse = data;
-    res = await axios.get("http://" + ip + ":5000/getSchoolReport/SCOPE");
+    res = await axios.get("/api/getSchoolReport/SCOPE");
     console.log(res.data);
-    res = await axios.get("http://" + ip + ":5000/getSchoolReport/SENCE");
+    res = await axios.get("/api/getSchoolReport/SENCE");
     this.state.sense = res.data;
-    res = await axios.get("http://" + ip + ":5000/getSchoolReport/SAS");
+    res = await axios.get("/api/getSchoolReport/SAS");
     this.state.sas = res.data;
-    res = await axios.get("http://" + ip + ":5000/getSchoolReport/VITSOL");
+    res = await axios.get("/api/getSchoolReport/VITSOL");
     this.state.vitsol = res.data;
     console.log(this.state);
-    // res = await axios.get("http://" + ip + ":5000/getSchoolReport/SCSE");
+    // res = await axios.get("/api/getSchoolReport/SCSE");
     // this.state.=res.data;
   };
   onChange = (e) => {

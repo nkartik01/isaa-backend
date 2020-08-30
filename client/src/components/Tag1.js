@@ -19,12 +19,9 @@ class TagImg extends Component {
   }
   getFields = async () => {
     console.log(this.props);
-    var res = await Axios.get(
-      "http://" + ip + ":5000/getFields/" + this.props.csv,
-      {
-        headers: { "x-auth-token": localStorage.getItem("token") },
-      }
-    );
+    var res = await Axios.get("/api/getFields/" + this.props.csv, {
+      headers: { "x-auth-token": localStorage.getItem("token") },
+    });
     console.log(res.data);
     this.setState({ fields: res.data });
   };
@@ -127,16 +124,12 @@ class TagImg extends Component {
           height: this.state.textBox[keys[i]].height * 6,
         });
       }
-      var res = await Axios.post(
-        "http://" + ip + ":5000/saveCoordinates",
-        body,
-        {
-          headers: { "x-auth-token": localStorage.getItem("token") },
-        }
-      );
+      var res = await Axios.post("/api/saveCoordinates", body, {
+        headers: { "x-auth-token": localStorage.getItem("token") },
+      });
       console.log(res);
       res = await Axios.post(
-        "http://" + ip + ":5000/putName/" + res.data._id,
+        "/api/putName/" + res.data._id,
         {},
         {
           headers: { "x-auth-token": localStorage.getItem("token") },
@@ -186,7 +179,7 @@ class TagImg extends Component {
                 style={{ border: "1px solid black" }}
               >
                 <img
-                  src={"http://" + ip + ":5000/sendImage/" + this.props.path}
+                  src={"/api/sendImage/" + this.props.path}
                   width="1164"
                   height="800"
                 />

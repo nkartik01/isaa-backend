@@ -12,7 +12,7 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   const onSubmit = async (e) => {
     e.preventDefault();
-    var res = await axios.post("http://" + ip + ":5000/login", {
+    var res = await axios.post("/api/login", {
       email,
       password,
     });

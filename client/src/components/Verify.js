@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 var ip = "isaa.ddns.net";
 const Verify = (props) => {
-  return (
-    <img src={"http://" + ip + ":5000/verify/" + props.match.params.id}></img>
-  );
+  return <img src={"/api/verify/" + props.match.params.id}></img>;
 };
 export default Verify;

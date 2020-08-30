@@ -21,7 +21,7 @@ const Register = (props) => {
       alert("Passwords do not match");
     } else {
       console.log("Success!");
-      var res = await axios.post("http://" + ip + ":5000/register", {
+      var res = await axios.post("/api/register", {
         name,
         email,
         password,
