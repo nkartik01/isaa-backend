@@ -163,7 +163,7 @@ router.post("/decrypt", async (req, res) => {
   var i = 0;
   var decoded = jwt.verify(req.body.token, "MySecretKey");
   var result = await axios.post(
-    "http://" + ip + ":5000/encrypt",
+    "/api/encrypt",
     {
       details: decoded.details,
     }
