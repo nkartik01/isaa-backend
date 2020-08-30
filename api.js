@@ -17,7 +17,7 @@ const Cert = require("./models/Cert");
 const Verify = require("./models/Verify");
 const { ObjectId } = require("mongodb");
 const auth = require("./middleware/auth");
-var ip = config.get("ip");
+const url = "https://isaa-project.herokuapp.com";
 
 router.post(
   "/register",
@@ -119,13 +119,21 @@ router.post(
 router.post("/encrypt", async (req, res) => {
   try {
     console.log("hi");
-    var hash1 = await axios.post("http://" + ip + ":5000/hashOf", {
-      fileName: req.body.details.csvFile,
-    });
+    var hash1 = await axios.post(
+      url + "/hashOf",
+      {
+        fileName: req.body.details.csvFile,
+      },
+      { "Content-Type": "application/json" }
+    );
     hash1 = hash1.data.hash;
-    var hash2 = await axios.post("http://" + ip + ":5000/hashOf", {
-      fileName: req.body.details.certFile,
-    });
+    var hash2 = await axios.post(
+      url + "/hashOf",
+      {
+        fileName: req.body.details.certFile,
+      },
+      { "Content-Type": "application/json" }
+    );
     hash2 = hash2.data.hash;
     var hashConcat = hash1.concat(hash2);
     var json = await csv().fromFile(req.body.details.csvFile);
@@ -163,10 +171,11 @@ router.post("/decrypt", async (req, res) => {
   var i = 0;
   var decoded = jwt.verify(req.body.token, "MySecretKey");
   var result = await axios.post(
-    "/api/encrypt",
+    url + "/encrypt",
     {
       details: decoded.details,
-    }
+    },
+    { "Content-Type": "application/json" }
     // { headers: { "x-auth-token": req.headers["x-auth-token"] } }
   );
   console.log(result.data, req.body);
@@ -203,168 +212,188 @@ router.post("/decrypt", async (req, res) => {
 });
 
 router.post("/putName/:docId", auth, async (req, res) => {
-  console.log(req.params.docId);
-  var xyz = await Cert.find({ _id: ObjectId(req.params.docId) });
-  xyz = xyz[0];
-  console.log("xyz", xyz);
-  var abc = {};
-  for (var i = 0; i < xyz.coordinates.length; i++) {
-    abc[xyz.coordinates[i].fieldName] = {
-      x: xyz.coordinates[i].x,
-      y: xyz.coordinates[i].y,
-      width: xyz.coordinates[i].width,
-      height: xyz.coordinates[i].height,
-    };
-  }
-  console.log(abc);
-  var user = await User.findOne({ _id: req.user.id });
-  const width = 1200;
-  const height = 600;
-  var fileName = "./cert/" + xyz.cert;
-  var json = await csv().fromFile("./csv/" + xyz.csv);
-  // console.log(json[0]);
-  user.certs.unshift({
-    uuid: req.params.docId,
-    count: json.length,
-    date: Date.now(),
-  });
-  console.log(user);
-  await user.save();
-  var c1 = 0;
-  var c2 = 0;
-  for (var i = 0; i < json.length; i++) {
-    var canvas = createCanvas(width, height);
-    var context = canvas.getContext("2d");
-    context.textAlign = "left";
-    context.textBaseline = "top";
-    context.fillStyle = "#000000";
-    image = await loadImage(fileName);
-    context.drawImage(image, 0, 0, 1200, 600);
-    var keys = Object.keys(abc);
-    resObject = [];
-    for (var j = 0; j < keys.length; j++) {
-      context.font = "bold " + abc[keys[j]].height + "px Arial";
-      // console.log(abc[keys[j]].height);
-      context.fillText(json[i][keys[j]], abc[keys[j]].x, abc[keys[j]].y);
-    }
-    var imgData = canvas.toBuffer("image/png");
-    // console.log(imgData);
-    var pdfContent = new jsPDF({
-      orientation: "l",
-      unit: "mm",
-      format: [297, 210],
-    });
-    var ret = pdfContent.addImage(imgData, "PNG", 3, 3, 291, 200);
-    var body = {
-      details: {
-        csvFile: "./csv/" + xyz.csv,
-        certFile: fileName,
-        csvSerial: i,
-        docId: req.params.docId,
-      },
-    };
-    var res1 = await axios.post("http://" + ip + ":5000/encrypt", body);
-    var token = res1.data.jwt;
-    var ver = new Verify({ token: token });
-    await ver.save();
-    pdfContent.textWithLink("Click here to Verify the Certificate", 200, 210, {
-      url: "http://" + ip + ":3000/#/verify/" + ver._id,
-    });
-    var data = new Buffer(pdfContent.output("arraybuffer"));
-    await PDFNet.initialize();
-    const doc = await PDFNet.PDFDoc.createFromBuffer(data);
-    doc.initSecurityHandler();
-    console.log("PDFNet and PDF document initialized and locked");
-    const sigHandlerId = await doc.addStdSignatureHandlerFromFile(
-      "./ISAA.pfx",
-      "@Kartik01"
-    );
-    const sigField = await doc.fieldCreate(
-      "Signature1",
-      PDFNet.Field.Type.e_signature
-    );
-    const page1 = await doc.getPage(1);
-    const widgetAnnot = await PDFNet.WidgetAnnot.create(
-      await doc.getSDFDoc(),
-      await PDFNet.Rect.init(0, 0, 0, 0),
-      sigField
-    );
-    page1.annotPushBack(widgetAnnot);
-    widgetAnnot.setPage(page1);
-    const widgetObj = await widgetAnnot.getSDFObj();
-    widgetObj.putNumber("F", 132);
-    widgetObj.putName("Type", "Annot");
-    const sigDict = await sigField.useSignatureHandler(sigHandlerId);
-    sigDict.putName("SubFilter", "adbe.pkcs7.detached");
-    sigDict.putString("Name", "VITC_ISAA");
-    data = await doc.saveMemoryBuffer(PDFNet.SDFDoc.SaveOptions.e_linearized);
-    console.log("hi");
-    try {
-      var transport = nodemailer.createTransport({
-        host: "smtp.elasticemail.com",
-        port: 2525,
-        auth: {
-          user: "bewithkartik@gmail.com",
-          pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
-        },
-      });
-      var mailOptions = {
-        from: "'bewithkartik' <bewithkartik@gmail.com>",
-        to: json[i].email,
-        subject: "Your Certificate for " + xyz.name,
-        html: `<p>${xyz.msg}</p>`,
-        attachments: [
-          {
-            filename: "cert.pdf",
-            content: data,
-            contentType: "application/vnd.pdf",
-          },
-        ],
+  try {
+    console.log(req.params.docId);
+    var xyz = await Cert.find({ _id: ObjectId(req.params.docId) });
+    xyz = xyz[0];
+    console.log("xyz", xyz);
+    var abc = {};
+    for (var i = 0; i < xyz.coordinates.length; i++) {
+      abc[xyz.coordinates[i].fieldName] = {
+        x: xyz.coordinates[i].x,
+        y: xyz.coordinates[i].y,
+        width: xyz.coordinates[i].width,
+        height: xyz.coordinates[i].height,
       };
-      console.log(mailOptions);
-      transport.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          c1 = c1 + 1;
-          console.log(error);
-          resObject[mailOptions.to] = "Not Sent";
-        } else {
-          console.log("Message sent: %s", info.messageId);
-          c2 = c2 + 1;
-        }
-        if (c1 + c2 === json.length) {
-          if (c1 !== 0) {
-            var failList1 = Object.keys(resObject);
-            var failList = "";
-            for (var k = 0; k < c1; k++) {
-              failList = failList + "<li>" + failList1[k] + "</li>";
-            }
-            var transport = nodemailer.createTransport({
-              host: "smtp.elasticemail.com",
-              port: 2525,
-              auth: {
-                user: "bewithkartik@gmail.com",
-                pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
-              },
-            });
-            var mailOptions = {
-              from: "'bewithkartik' <bewithkartik@gmail.com>",
-              to: xyz.email,
-              subject: "Error in sending Certificate for " + xyz.name,
-              html:
-                `<div><p>Email Could not be sent to the following Addresses provided in the CSV</p><list>` +
-                failList +
-                `</list></div>`,
-            };
-            console.log(mailOptions);
-            transport.sendMail(mailOptions, (error, info) => {});
-          }
-        }
-      });
-    } catch (err) {
-      console.log(err);
     }
+    console.log(abc);
+    var user = await User.findOne({ _id: req.user.id });
+    const width = 1200;
+    const height = 600;
+    var fileName = "./cert/" + xyz.cert;
+    console.log(1);
+    var json = await csv().fromFile("./csv/" + xyz.csv);
+    // console.log(json[0]);
+    user.certs.unshift({
+      uuid: req.params.docId,
+      count: json.length,
+      date: Date.now(),
+    });
+    console.log(1, user);
+    await user.save();
+    console.log(2);
+    var c1 = 0;
+    var c2 = 0;
+    for (var i = 0; i < json.length; i++) {
+      var canvas = createCanvas(width, height);
+      var context = canvas.getContext("2d");
+      context.textAlign = "left";
+      context.textBaseline = "top";
+      context.fillStyle = "#000000";
+      console.log(0);
+      image = await loadImage(fileName);
+      console.log(1);
+      context.drawImage(image, 0, 0, 1200, 600);
+      var keys = Object.keys(abc);
+      resObject = [];
+      for (var j = 0; j < keys.length; j++) {
+        context.font = "bold " + abc[keys[j]].height + "px Arial";
+        // console.log(abc[keys[j]].height);
+        context.fillText(json[i][keys[j]], abc[keys[j]].x, abc[keys[j]].y);
+      }
+      var imgData = canvas.toBuffer("image/png");
+      // console.log(imgData);
+      var pdfContent = new jsPDF({
+        orientation: "l",
+        unit: "mm",
+        format: [297, 210],
+      });
+      var ret = pdfContent.addImage(imgData, "PNG", 3, 3, 291, 200);
+      var body = {
+        details: {
+          csvFile: "./csv/" + xyz.csv,
+          certFile: fileName,
+          csvSerial: i,
+          docId: req.params.docId,
+        },
+      };
+      try {
+        var res1 = await axios.post(url + "/encrypt", body, {
+          "Content-Type": "application/json",
+        });
+      } catch (err) {
+        console.log(err, err.response);
+        console.log("1res1");
+      }
+      var token = res1.data.jwt;
+      var ver = new Verify({ token: token });
+      await ver.save();
+      pdfContent.textWithLink(
+        "Click here to Verify the Certificate",
+        200,
+        210,
+        {
+          url: "http://" + ip + ":3000/#/verify/" + ver._id,
+        }
+      );
+      var data = new Buffer(pdfContent.output("arraybuffer"));
+      await PDFNet.initialize();
+      const doc = await PDFNet.PDFDoc.createFromBuffer(data);
+      doc.initSecurityHandler();
+      console.log("PDFNet and PDF document initialized and locked");
+      const sigHandlerId = await doc.addStdSignatureHandlerFromFile(
+        "./ISAA.pfx",
+        "@Kartik01"
+      );
+      const sigField = await doc.fieldCreate(
+        "Signature1",
+        PDFNet.Field.Type.e_signature
+      );
+      const page1 = await doc.getPage(1);
+      const widgetAnnot = await PDFNet.WidgetAnnot.create(
+        await doc.getSDFDoc(),
+        await PDFNet.Rect.init(0, 0, 0, 0),
+        sigField
+      );
+      page1.annotPushBack(widgetAnnot);
+      widgetAnnot.setPage(page1);
+      const widgetObj = await widgetAnnot.getSDFObj();
+      widgetObj.putNumber("F", 132);
+      widgetObj.putName("Type", "Annot");
+      const sigDict = await sigField.useSignatureHandler(sigHandlerId);
+      sigDict.putName("SubFilter", "adbe.pkcs7.detached");
+      sigDict.putString("Name", "VITC_ISAA");
+      data = await doc.saveMemoryBuffer(PDFNet.SDFDoc.SaveOptions.e_linearized);
+      console.log("hi");
+      try {
+        var transport = nodemailer.createTransport({
+          host: "smtp.elasticemail.com",
+          port: 2525,
+          auth: {
+            user: "bewithkartik@gmail.com",
+            pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
+          },
+        });
+        var mailOptions = {
+          from: "'bewithkartik' <bewithkartik@gmail.com>",
+          to: json[i].email,
+          subject: "Your Certificate for " + xyz.name,
+          html: `<p>${xyz.msg}</p>`,
+          attachments: [
+            {
+              filename: "cert.pdf",
+              content: data,
+              contentType: "application/vnd.pdf",
+            },
+          ],
+        };
+        console.log(mailOptions);
+        transport.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            c1 = c1 + 1;
+            console.log(error);
+            resObject[mailOptions.to] = "Not Sent";
+          } else {
+            console.log("Message sent: %s", info.messageId);
+            c2 = c2 + 1;
+          }
+          if (c1 + c2 === json.length) {
+            if (c1 !== 0) {
+              var failList1 = Object.keys(resObject);
+              var failList = "";
+              for (var k = 0; k < c1; k++) {
+                failList = failList + "<li>" + failList1[k] + "</li>";
+              }
+              var transport = nodemailer.createTransport({
+                host: "smtp.elasticemail.com",
+                port: 2525,
+                auth: {
+                  user: "bewithkartik@gmail.com",
+                  pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
+                },
+              });
+              var mailOptions = {
+                from: "'bewithkartik' <bewithkartik@gmail.com>",
+                to: xyz.email,
+                subject: "Error in sending Certificate for " + xyz.name,
+                html:
+                  `<div><p>Email Could not be sent to the following Addresses provided in the CSV</p><list>` +
+                  failList +
+                  `</list></div>`,
+              };
+              console.log(mailOptions);
+              transport.sendMail(mailOptions, (error, info) => {});
+            }
+          }
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    }
+    return res.send("Processing");
+  } catch (err) {
+    console.log(err);
   }
-  return res.send("Processing");
 });
 
 router.get("/verify/:docId", async (req, res) => {
@@ -372,9 +401,13 @@ router.get("/verify/:docId", async (req, res) => {
   var xyz = await Verify.find({ _id: ObjectId(req.params.docId) });
   xyz = xyz[0];
   console.log("xyz", xyz);
-  var decoded = await axios.post("http://" + ip + ":5000/decrypt", {
-    token: xyz.token,
-  });
+  var decoded = await axios.post(
+    url + "/decrypt",
+    {
+      token: xyz.token,
+    },
+    { "Content-Type": "application/json" }
+  );
   console.log(decoded.data);
   var zxc = await Cert.find({ _id: decoded.data.details.docId });
   zxc = zxc[0];
