@@ -25,16 +25,26 @@ class Landing extends React.Component {
     console.log(this.state.csv);
     data.csv = this.state.csv;
     console.log(data);
-    var res = await axios.post("/api/saveCSV", data, {
-      headers: {
-        "x-auth-token": localStorage.getItem("token"),
-        "Content-Type": "application/json",
-      },
-    });
+    var res = await axios.post(
+      "/api/" + localStorage.getItem("status") + "/saveCSV",
+      data,
+      {
+        headers: {
+          "x-auth-token": localStorage.getItem("token"),
+          "Content-Type": "application/json",
+        },
+      }
+    );
     console.log(res);
-    var res1 = await axios.get("/api/getFields/" + res.data.csvFile, {
-      headers: { "x-auth-token": localStorage.getItem("token") },
-    });
+    var res1 = await axios.get(
+      "/api/" +
+        localStorage.getItem("status") +
+        "/getFields/" +
+        res.data.csvFile,
+      {
+        headers: { "x-auth-token": localStorage.getItem("token") },
+      }
+    );
     res1 = res1.data;
     if (res1.indexOf("email") === -1) {
       return alert("'email' Field is not available in CSV.");
@@ -62,7 +72,7 @@ class Landing extends React.Component {
     };
     console.log(data);
     var res = await axios.post(
-      "/api/saveCert/" + this.state.uuid,
+      "/api/" + localStorage.getItem("status") + "/saveCert/" + this.state.uuid,
       data,
       config
     );

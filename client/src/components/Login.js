@@ -1,6 +1,7 @@
 import React, { Fragment, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { loadImage } from "canvas";
 var ip = "isaa.ddns.net";
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -12,12 +13,33 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   const onSubmit = async (e) => {
     e.preventDefault();
-    var res = await axios.post("/api/login", {
-      email,
-      password,
-    });
-    console.log(res);
-    localStorage.setItem("token", res.data.token);
+    var res;
+    try {
+      res = await axios.post("/api/studentLogin", {
+        email,
+        password,
+      });
+      console.log(res.status);
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("status", "student");
+    } catch (err) {
+      console.log(err.response);
+      if (err.response.status === 400) {
+        try {
+          res = await axios.post("/api/studentLogin", {
+            email,
+            password,
+          });
+          console.log(res.status);
+          localStorage.setItem("token", res.data.token);
+          localStorage.setItem("status", "teacher");
+        } catch (error) {
+          console.log(error.response);
+          alert("Invalid Credentials");
+          return;
+        }
+      }
+    }
     console.log(formData);
     window.open("/#/", "_self");
   };

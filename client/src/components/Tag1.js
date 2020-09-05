@@ -19,9 +19,12 @@ class TagImg extends Component {
   }
   getFields = async () => {
     console.log(this.props);
-    var res = await Axios.get("/api/getFields/" + this.props.csv, {
-      headers: { "x-auth-token": localStorage.getItem("token") },
-    });
+    var res = await Axios.get(
+      "/api/" + localStorage.getItem("status") + "/getFields/" + this.props.csv,
+      {
+        headers: { "x-auth-token": localStorage.getItem("token") },
+      }
+    );
     console.log(res.data);
     this.setState({ fields: res.data });
   };
@@ -105,12 +108,8 @@ class TagImg extends Component {
       if (msg.length === 0) {
         return alert("Message Cant be Empty");
       }
-      var email = document.getElementById("email").value;
-      if (email.length === 0) {
-        return alert("Email Cant be Empty");
-      }
       console.log(this.state.textBox);
-      var body = { name: name, msg: msg, email: email };
+      var body = { name: name, msg: msg };
       body.cert = this.props.path;
       body.csv = this.props.csv;
       body.coordinates = [];
@@ -124,12 +123,16 @@ class TagImg extends Component {
           height: this.state.textBox[keys[i]].height * 6,
         });
       }
-      var res = await Axios.post("/api/saveCoordinates", body, {
-        headers: { "x-auth-token": localStorage.getItem("token") },
-      });
+      var res = await Axios.post(
+        "/api/" + localStorage.getItem("status") + "/saveCoordinates",
+        body,
+        {
+          headers: { "x-auth-token": localStorage.getItem("token") },
+        }
+      );
       console.log(res);
       res = await Axios.post(
-        "/api/putName/" + res.data._id,
+        "/api/" + localStorage.getItem("status") + "/putName/" + res.data._id,
         {},
         {
           headers: { "x-auth-token": localStorage.getItem("token") },
