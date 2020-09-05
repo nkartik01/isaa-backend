@@ -26,7 +26,7 @@ const Login = () => {
       console.log(err.response);
       if (err.response.status === 400) {
         try {
-          res = await axios.post("/api/studentLogin", {
+          res = await axios.post("/api/teacherLogin", {
             email,
             password,
           });
