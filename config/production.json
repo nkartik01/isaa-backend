@@ -1,5 +1,5 @@
 {
-  "mongodb": "mongodb+srv://admin:admin@devconnector-wnasn.gcp.mongodb.net/test?retryWrites=true&w=majority",
+  "mongodb": "mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass%20Community&ssl=false",
   "JWTSecret": "admin",
   "ip": "isaa.ddns.net"
 }

@@ -7,26 +7,65 @@ const router = express.Router();
 const bcryptjs = require("bcryptjs");
 const csv = require("csvtojson");
 const jwt = require("jsonwebtoken");
-var nodemailer = require("nodemailer");
+const nodemailer = require("nodemailer");
 const sha = require("js-sha256");
 const axios = require("axios");
 const fs = require("fs");
 const { PDFNet } = require("@pdftron/pdfnet-node");
-const User = require("./models/User");
+const Teacher = require("./models/Teacher");
 const Cert = require("./models/Cert");
 const Verify = require("./models/Verify");
 const { ObjectId } = require("mongodb");
-const auth = require("./middleware/auth");
-const url = "https://isaa-project.herokuapp.com";
+const teacherAuth = require("./middleware/teacherAuth");
+const Student = require("./models/Student");
+const adminAuth = require("./middleware/adminAuth");
+const studentAuth = require("./middleware/studentAuth");
+const url = "http://localhost:5000";
+
+router.post("/adminLogin", async (req, res) => {
+  try {
+    var { user, password } = req.body;
+    // console.log(user, password);
+    if (user === config.get("adminUser")) {
+      const ismatch = await bcryptjs.compare(
+        password,
+        config.get("adminPassword")
+      );
+      if (!ismatch) {
+        res.status(400).json({ errors: [{ msg: "Invalid Credentials" }] });
+      }
+      const payload = {
+        user: {
+          id: user,
+        },
+      };
+
+      jwt.sign(payload, config.get("JWTSecretAdmin"), (err, token) => {
+        if (err) throw err;
+        return res.json({ token });
+      });
+    } else {
+      res.status(400).json({ errors: [{ msg: "Invalid Credentials" }] });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+});
 
 router.post(
-  "/register",
+  "/registerTeacher",
   [
-    check("name", "Name is required").not().isEmpty(),
-    check("email", "Enter a valid email").isEmail(),
-    check("password", "Password must be atleast 6 characters long.").isLength({
-      min: 6,
-    }),
+    adminAuth,
+    [
+      check("name", "Name is required").not().isEmpty(),
+      check("email", "Enter a valid email").isEmail(),
+      check("password", "Password must be atleast 6 characters long.").isLength(
+        {
+          min: 6,
+        }
+      ),
+    ],
   ],
   async (req, res) => {
     const error = validationResult(req);
@@ -36,13 +75,13 @@ router.post(
     const { name, email, password, school } = req.body;
 
     try {
-      var user1 = await User.findOne({ email });
+      var user1 = await Teacher.findOne({ email });
       if (user1) {
         return res
           .status(400)
           .json({ errors: [{ msg: "User already exists" }] });
       }
-      user = new User({
+      user = new Teacher({
         name,
         email,
         password,
@@ -58,7 +97,62 @@ router.post(
         },
       };
 
-      jwt.sign(payload, config.get("JWTSecret"), (err, token) => {
+      jwt.sign(payload, config.get("JWTSecretTeacher"), (err, token) => {
+        if (err) throw err;
+        return res.json({ token });
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(400).send("User Register failed");
+    }
+  }
+);
+
+router.post(
+  "/registerStudent",
+  [
+    adminAuth,
+    [
+      check("name", "Name is required").not().isEmpty(),
+      check("email", "Enter a valid email").isEmail(),
+      check("password", "Password must be atleast 6 characters long.").isLength(
+        {
+          min: 6,
+        }
+      ),
+    ],
+  ],
+  async (req, res) => {
+    const error = validationResult(req);
+    if (!error.isEmpty()) {
+      return res.status(400).json({ errors: error.array() });
+    }
+    const { name, email, password, school } = req.body;
+
+    try {
+      var user1 = await Student.findOne({ email });
+      if (user1) {
+        return res
+          .status(400)
+          .json({ errors: [{ msg: "User already exists" }] });
+      }
+      user = new Student({
+        name,
+        email,
+        password,
+        school: school.toUpperCase(),
+        certs: [],
+      });
+      const salt = await bcryptjs.genSalt(10);
+      user.password = await bcryptjs.hash(password, salt);
+      await user.save();
+      const payload = {
+        user: {
+          id: user.id,
+        },
+      };
+
+      jwt.sign(payload, config.get("JWTSecretStudent"), (err, token) => {
         if (err) throw err;
         return res.json({ token });
       });
@@ -73,7 +167,7 @@ router.post(
 // @desc  test route
 // @access Public
 router.post(
-  "/login",
+  "/teacherLogin",
   [
     check("email", "Enter a valid email").isEmail(),
     check("password", "Password must be atleast 6 characters long.").exists(),
@@ -86,26 +180,70 @@ router.post(
     }
     const { email, password } = req.body;
     try {
-      var user = await User.findOne({ email });
-      console.log(user);
+      var user = await Teacher.findOne({ email });
+      // console.log(user);
       if (!user) {
         return res
           .status(400)
           .json({ errors: [{ msg: "Invalid Credentials" }] });
       }
-      console.log(1);
+      // console.log(1);
       const ismatch = await bcryptjs.compare(password, user.password);
       if (!ismatch) {
         res.status(400).json({ errors: [{ msg: "Invalid Credentials" }] });
       }
-      console.log(2);
+      // console.log(2);
       const payload = {
         user: {
           id: user.id,
         },
       };
-      console.log(3);
-      jwt.sign(payload, config.get("JWTSecret"), (err, token) => {
+      // console.log(3);
+      jwt.sign(payload, config.get("JWTSecretTeacher"), (err, token) => {
+        if (err) throw err;
+        res.json({ token });
+      });
+    } catch (err) {
+      console.log(err);
+      res.send("Error");
+    }
+  }
+);
+
+router.post(
+  "/studentLogin",
+  [
+    check("email", "Enter a valid email").isEmail(),
+    check("password", "Password must be atleast 6 characters long.").exists(),
+  ],
+
+  async (req, res) => {
+    const error = validationResult(req);
+    if (!error.isEmpty()) {
+      return res.status(400).json({ errors: error.array() });
+    }
+    const { email, password } = req.body;
+    try {
+      var user = await Student.findOne({ email });
+      // console.log(user);
+      if (!user) {
+        return res
+          .status(400)
+          .json({ errors: [{ msg: "Invalid Credentials" }] });
+      }
+      // console.log(1);
+      const ismatch = await bcryptjs.compare(password, user.password);
+      if (!ismatch) {
+        res.status(400).json({ errors: [{ msg: "Invalid Credentials" }] });
+      }
+      // console.log(2);
+      const payload = {
+        user: {
+          id: user.id,
+        },
+      };
+      // console.log(3);
+      jwt.sign(payload, config.get("JWTSecretStudent"), (err, token) => {
         if (err) throw err;
         res.json({ token });
       });
@@ -120,7 +258,7 @@ router.post("/encrypt", async (req, res) => {
   try {
     console.log("hi");
     var hash1 = await axios.post(
-      url + "/hashOf",
+      url + "/api/hashOf",
       {
         fileName: req.body.details.csvFile,
       },
@@ -128,7 +266,7 @@ router.post("/encrypt", async (req, res) => {
     );
     hash1 = hash1.data.hash;
     var hash2 = await axios.post(
-      url + "/hashOf",
+      url + "/api/hashOf",
       {
         fileName: req.body.details.certFile,
       },
@@ -171,7 +309,7 @@ router.post("/decrypt", async (req, res) => {
   var i = 0;
   var decoded = jwt.verify(req.body.token, "MySecretKey");
   var result = await axios.post(
-    url + "/encrypt",
+    url + "/api/encrypt",
     {
       details: decoded.details,
     },
@@ -211,7 +349,7 @@ router.post("/decrypt", async (req, res) => {
   res.send(decoded);
 });
 
-router.post("/putName/:docId", auth, async (req, res) => {
+router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
   try {
     console.log(req.params.docId);
     var xyz = await Cert.find({ _id: ObjectId(req.params.docId) });
@@ -227,7 +365,7 @@ router.post("/putName/:docId", auth, async (req, res) => {
       };
     }
     console.log(abc);
-    var user = await User.findOne({ _id: req.user.id });
+    var user = await Teacher.findOne({ _id: req.user.id });
     const width = 1200;
     const height = 600;
     var fileName = "./cert/" + xyz.cert;
@@ -277,14 +415,9 @@ router.post("/putName/:docId", auth, async (req, res) => {
           docId: req.params.docId,
         },
       };
-      try {
-        var res1 = await axios.post(url + "/encrypt", body, {
-          "Content-Type": "application/json",
-        });
-      } catch (err) {
-        console.log(err, err.response);
-        console.log("1res1");
-      }
+      var res1 = await axios.post(url + "/api/encrypt", body, {
+        "Content-Type": "application/json",
+      });
       var token = res1.data.jwt;
       var ver = new Verify({ token: token });
       await ver.save();
@@ -293,7 +426,188 @@ router.post("/putName/:docId", auth, async (req, res) => {
         200,
         210,
         {
-          url: "http://" + ip + ":3000/#/verify/" + ver._id,
+          url: url + "/#/verify/" + ver._id,
+        }
+      );
+      var data = new Buffer(pdfContent.output("arraybuffer"));
+      await PDFNet.initialize();
+      const doc = await PDFNet.PDFDoc.createFromBuffer(data);
+      doc.initSecurityHandler();
+      console.log("PDFNet and PDF document initialized and locked");
+      const sigHandlerId = await doc.addStdSignatureHandlerFromFile(
+        "./ISAA.pfx",
+        "@Kartik01"
+      );
+      const sigField = await doc.fieldCreate(
+        "Signature1",
+        PDFNet.Field.Type.e_signature
+      );
+      const page1 = await doc.getPage(1);
+      const widgetAnnot = await PDFNet.WidgetAnnot.create(
+        await doc.getSDFDoc(),
+        await PDFNet.Rect.init(0, 0, 0, 0),
+        sigField
+      );
+      page1.annotPushBack(widgetAnnot);
+      widgetAnnot.setPage(page1);
+      const widgetObj = await widgetAnnot.getSDFObj();
+      widgetObj.putNumber("F", 132);
+      widgetObj.putName("Type", "Annot");
+      const sigDict = await sigField.useSignatureHandler(sigHandlerId);
+      sigDict.putName("SubFilter", "adbe.pkcs7.detached");
+      sigDict.putString("Name", "VITC_ISAA");
+      data = await doc.saveMemoryBuffer(PDFNet.SDFDoc.SaveOptions.e_linearized);
+      console.log("hi");
+      try {
+        var transport = nodemailer.createTransport({
+          host: "smtp.elasticemail.com",
+          port: 2525,
+          auth: {
+            user: "bewithkartik@gmail.com",
+            pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
+          },
+        });
+        var mailOptions = {
+          from: "'ISAA Project' <bewithkartik@gmail.com>",
+          to: json[i].email,
+          subject: "Your Certificate for " + xyz.name,
+          html: `<p>${xyz.msg}</p>`,
+          attachments: [
+            {
+              filename: "cert.pdf",
+              content: data,
+              contentType: "application/vnd.pdf",
+            },
+          ],
+        };
+        console.log(mailOptions);
+        transport.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            c1 = c1 + 1;
+            console.log(error);
+            resObject[mailOptions.to] = "Not Sent";
+          } else {
+            console.log("Message sent: %s", info.messageId);
+            c2 = c2 + 1;
+          }
+          if (c1 + c2 === json.length) {
+            if (c1 !== 0) {
+              var failList1 = Object.keys(resObject);
+              var failList = "";
+              for (var k = 0; k < c1; k++) {
+                failList = failList + "<li>" + failList1[k] + "</li>";
+              }
+              var transport = nodemailer.createTransport({
+                host: "smtp.elasticemail.com",
+                port: 2525,
+                auth: {
+                  user: "bewithkartik@gmail.com",
+                  pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
+                },
+              });
+              var mailOptions = {
+                from: "'ISAA Project' <bewithkartik@gmail.com>",
+                to: user.email,
+                subject: "Error in sending Certificate for " + xyz.name,
+                html:
+                  `<div><p>Email Could not be sent to the following Addresses provided in the CSV</p><list>` +
+                  failList +
+                  `</list></div>`,
+              };
+              console.log(mailOptions);
+              transport.sendMail(mailOptions, (error, info) => {});
+            }
+          }
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    }
+    return res.send("Processing");
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+router.post("/student/putName/:docId", studentAuth, async (req, res) => {
+  try {
+    console.log(req.params.docId);
+    var xyz = await Cert.find({ _id: ObjectId(req.params.docId) });
+    xyz = xyz[0];
+    console.log("xyz", xyz);
+    var abc = {};
+    for (var i = 0; i < xyz.coordinates.length; i++) {
+      abc[xyz.coordinates[i].fieldName] = {
+        x: xyz.coordinates[i].x,
+        y: xyz.coordinates[i].y,
+        width: xyz.coordinates[i].width,
+        height: xyz.coordinates[i].height,
+      };
+    }
+    console.log(abc);
+    var user = await Student.findOne({ _id: req.user.id });
+    const width = 1200;
+    const height = 600;
+    var fileName = "./cert/" + xyz.cert;
+    console.log(1);
+    var json = await csv().fromFile("./csv/" + xyz.csv);
+    // console.log(json[0]);
+    user.certs.unshift({
+      uuid: req.params.docId,
+      count: json.length,
+      date: Date.now(),
+    });
+    console.log(1, user);
+    await user.save();
+    console.log(2);
+    var c1 = 0;
+    var c2 = 0;
+    for (var i = 0; i < json.length; i++) {
+      var canvas = createCanvas(width, height);
+      var context = canvas.getContext("2d");
+      context.textAlign = "left";
+      context.textBaseline = "top";
+      context.fillStyle = "#000000";
+      console.log(0);
+      image = await loadImage(fileName);
+      console.log(1);
+      context.drawImage(image, 0, 0, 1200, 600);
+      var keys = Object.keys(abc);
+      resObject = [];
+      for (var j = 0; j < keys.length; j++) {
+        context.font = "bold " + abc[keys[j]].height + "px Arial";
+        // console.log(abc[keys[j]].height);
+        context.fillText(json[i][keys[j]], abc[keys[j]].x, abc[keys[j]].y);
+      }
+      var imgData = canvas.toBuffer("image/png");
+      // console.log(imgData);
+      var pdfContent = new jsPDF({
+        orientation: "l",
+        unit: "mm",
+        format: [297, 210],
+      });
+      var ret = pdfContent.addImage(imgData, "PNG", 3, 3, 291, 200);
+      var body = {
+        details: {
+          csvFile: "./csv/" + xyz.csv,
+          certFile: fileName,
+          csvSerial: i,
+          docId: req.params.docId,
+        },
+      };
+      var res1;
+      res1 = await axios.post(url + "/api/encrypt", body, {
+        "Content-Type": "application/json",
+      });
+      var token = res1.data.jwt;
+      var ver = new Verify({ token: token });
+      await ver.save();
+      pdfContent.textWithLink(
+        "Click here to Verify the Certificate",
+        200,
+        210,
+        {
+          url: url + "/#/verify/" + ver._id,
         }
       );
       var data = new Buffer(pdfContent.output("arraybuffer"));
@@ -374,7 +688,7 @@ router.post("/putName/:docId", auth, async (req, res) => {
               });
               var mailOptions = {
                 from: "'bewithkartik' <bewithkartik@gmail.com>",
-                to: xyz.email,
+                to: user.email,
                 subject: "Error in sending Certificate for " + xyz.name,
                 html:
                   `<div><p>Email Could not be sent to the following Addresses provided in the CSV</p><list>` +
@@ -402,7 +716,7 @@ router.get("/verify/:docId", async (req, res) => {
   xyz = xyz[0];
   console.log("xyz", xyz);
   var decoded = await axios.post(
-    url + "/decrypt",
+    url + "/api/decrypt",
     {
       token: xyz.token,
     },
@@ -446,7 +760,7 @@ router.get("/verify/:docId", async (req, res) => {
   return res.send(imgData);
 });
 
-router.post("/saveCSV", auth, async (req, res) => {
+router.post("/teacher/saveCSV", teacherAuth, async (req, res) => {
   try {
     console.log(req.files.csv);
     var file = req.files.csv;
@@ -470,7 +784,7 @@ router.post("/saveCSV", auth, async (req, res) => {
   }
 });
 
-router.post("/saveCoordinates", auth, async (req, res) => {
+router.post("/teacher/saveCoordinates", teacherAuth, async (req, res) => {
   try {
     console.log(req.body);
     var cert = new Cert(req.body);
@@ -482,7 +796,43 @@ router.post("/saveCoordinates", auth, async (req, res) => {
   }
 });
 
-router.post("/saveCert/:uuid", auth, async (req, res) => {
+router.post("/student/saveCSV", studentAuth, async (req, res) => {
+  try {
+    console.log(req.files.csv);
+    var file = req.files.csv;
+    var dt = new Date().getTime();
+    var uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+      /[xy]/g,
+      function (c) {
+        var r = (dt + Math.random() * 16) % 16 | 0;
+        dt = Math.floor(dt / 16);
+        return (c == "x" ? r : (r & 0x3) | 0x8).toString(16);
+      }
+    );
+    console.log(uuid);
+    var q = `./csv/${uuid}.csv`;
+    console.log(q, typeof q, file.data);
+    require("fs").writeFileSync(q, file.data);
+    return res.json({ uuid: uuid, csvFile: uuid + ".csv" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
+  }
+});
+
+router.post("/student/saveCoordinates", studentAuth, async (req, res) => {
+  try {
+    console.log(req.body);
+    var cert = new Cert(req.body);
+    await cert.save();
+    return res.send(cert);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send(err);
+  }
+});
+
+router.post("/student/saveCert/:uuid", studentAuth, async (req, res) => {
   var file = req.files.cert;
   var dt = new Date().getTime();
   var uuid = req.params.uuid;
@@ -491,7 +841,21 @@ router.post("/saveCert/:uuid", auth, async (req, res) => {
   return res.json({ certFile: uuid + "." + req.headers["extension"] });
 });
 
-router.get("/getFields/:csvFile", auth, async (req, res) => {
+router.post("/teacher/saveCert/:uuid", teacherAuth, async (req, res) => {
+  var file = req.files.cert;
+  var dt = new Date().getTime();
+  var uuid = req.params.uuid;
+  var q = `./cert/${uuid}.${req.headers["extension"]}`;
+  require("fs").writeFileSync(q, file.data);
+  return res.json({ certFile: uuid + "." + req.headers["extension"] });
+});
+
+router.get("/teacher/getFields/:csvFile", teacherAuth, async (req, res) => {
+  var json = await csv().fromFile("./csv/" + req.params.csvFile);
+  res.send(Object.keys(json[0]));
+});
+
+router.get("/student/getFields/:csvFile", studentAuth, async (req, res) => {
   var json = await csv().fromFile("./csv/" + req.params.csvFile);
   res.send(Object.keys(json[0]));
 });
@@ -507,7 +871,7 @@ router.post("/sendMail/:email/:eventName/:msg", async (req, res) => {
       },
     });
     var mailOptions = {
-      from: "'bewithkartik' <bewithkartik@gmail.com>",
+      from: "'ISAA Project' <bewithkartik@gmail.com>",
       to: req.params.email,
       subject: "Your Certificate for " + req.params.eventName,
       html: `<p>${req.params.msg}</p>`,
@@ -555,7 +919,7 @@ router.post("/hashOf", async (req, res) => {
   }
 });
 
-router.post("/sign", auth, async (req, res) => {
+router.post("/sign", teacherAuth, async (req, res) => {
   try {
     var imgData = req.body.img;
     console.log(imgData);
@@ -576,9 +940,9 @@ router.post("/sign", auth, async (req, res) => {
   }
 });
 
-router.get("/getPersonalReport", auth, async (req, res) => {
+router.get("/getPersonalReport", teacherAuth, async (req, res) => {
   try {
-    var user = await User.findOne({ _id: req.user.id });
+    var user = await Teacher.findOne({ _id: req.user.id });
     if (!user) {
       console.log("user not found");
       return res.status(400).send("User not found");
@@ -605,7 +969,7 @@ router.get("/getPersonalReport", auth, async (req, res) => {
 
 router.get("/getSchoolReport/:school", async (req, res) => {
   try {
-    var users = await User.find({ school: req.params.school });
+    var users = await Teacher.find({ school: req.params.school });
     var report = { date: {}, user: {} };
     for (var i = 0; i < users.length; i++) {
       report.user[users[i].name] = users[i].certs;

@@ -1,5 +1,9 @@
 {
   "mongodb": "mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass%20Community&ssl=false",
-  "JWTSecret": "admin",
-  "ip": "isaa.ddns.net"
+  "JWTSecretTeacher": "teacher",
+  "JWTSecretAdmin": "admin",
+  "JWTSecretStudent": "student",
+  "ip": "isaa.ddns.net",
+  "adminUser": "admin",
+  "adminPassword": "$2y$12$E5Lej4MNTgkHxNsGyj0cY.T44Gn0B7wOPDb/NVR9gRclzjS6uxr5."
 }
