@@ -1,7 +1,7 @@
 const express = require("express");
 const config = require("config");
 const { jsPDF } = require("jspdf");
-const { createCanvas, loadImage } = require("canvas");
+const { createCanvas, registerFont,loadImage } = require("canvas");
 const { check, validationResult } = require("express-validator");
 const router = express.Router();
 const bcryptjs = require("bcryptjs");
@@ -20,8 +20,8 @@ const teacherAuth = require("./middleware/teacherAuth");
 const Student = require("./models/Student");
 const adminAuth = require("./middleware/adminAuth");
 const studentAuth = require("./middleware/studentAuth");
-const url = "http://localhost:5000";
-
+const url = "https://isaa-backend--nkartik.repl.co";
+registerFont('./Roboto/Roboto-Bold.ttf', { family: 'Roboto-Bold' });
 router.post("/adminLogin", async (req, res) => {
   try {
     var { user, password } = req.body;
@@ -395,7 +395,7 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
       var keys = Object.keys(abc);
       resObject = [];
       for (var j = 0; j < keys.length; j++) {
-        context.font = "bold " + abc[keys[j]].height + "px Arial";
+        context.font = "bold " + abc[keys[j]].height + "px Roboto-Bold";
         // console.log(abc[keys[j]].height);
         context.fillText(json[i][keys[j]], abc[keys[j]].x, abc[keys[j]].y);
       }
@@ -575,7 +575,7 @@ router.post("/student/putName/:docId", studentAuth, async (req, res) => {
       var keys = Object.keys(abc);
       resObject = [];
       for (var j = 0; j < keys.length; j++) {
-        context.font = "bold " + abc[keys[j]].height + "px Arial";
+        context.font = "bold " + abc[keys[j]].height + "px Roboto-Bold";
         // console.log(abc[keys[j]].height);
         context.fillText(json[i][keys[j]], abc[keys[j]].x, abc[keys[j]].y);
       }
@@ -753,7 +753,7 @@ router.get("/verify/:docId", async (req, res) => {
   context.drawImage(image, 0, 0, 1200, 600);
   var keys = Object.keys(abc);
   for (var j = 0; j < keys.length; j++) {
-    context.font = "bold " + abc[keys[j]].height + "px Arial";
+    context.font = "bold " + abc[keys[j]].height + "px Roboto-Bold";
     context.fillText(json[i][keys[j]], abc[keys[j]].x, abc[keys[j]].y);
   }
   var imgData = canvas.toBuffer("image/png");
