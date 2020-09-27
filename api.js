@@ -1,7 +1,7 @@
 const express = require("express");
 const config = require("config");
 const { jsPDF } = require("jspdf");
-const { createCanvas, registerFont,loadImage } = require("canvas");
+const { createCanvas, registerFont, loadImage } = require("canvas");
 const { check, validationResult } = require("express-validator");
 const router = express.Router();
 const bcryptjs = require("bcryptjs");
@@ -20,8 +20,9 @@ const teacherAuth = require("./middleware/teacherAuth");
 const Student = require("./models/Student");
 const adminAuth = require("./middleware/adminAuth");
 const studentAuth = require("./middleware/studentAuth");
-const url = "https://isaa-backend--nkartik.repl.co";
-registerFont('./Roboto/Roboto-Bold.ttf', { family: 'Roboto-Bold' });
+// const url = "https://isaa-backend--nkartik.repl.co";
+const url = "http://localhost:5000";
+registerFont("./Roboto/Roboto-Bold.ttf", { family: "Roboto-Bold" });
 router.post("/adminLogin", async (req, res) => {
   try {
     var { user, password } = req.body;
@@ -354,7 +355,7 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
     console.log(req.params.docId);
     var xyz = await Cert.find({ _id: ObjectId(req.params.docId) });
     xyz = xyz[0];
-    console.log("xyz", xyz);
+    console.log("xyz", xyz, xyz.coordinates);
     var abc = {};
     for (var i = 0; i < xyz.coordinates.length; i++) {
       abc[xyz.coordinates[i].fieldName] = {
@@ -364,7 +365,7 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
         height: xyz.coordinates[i].height,
       };
     }
-    console.log(abc);
+    // console.log(abc);
     var user = await Teacher.findOne({ _id: req.user.id });
     const width = 1200;
     const height = 600;
@@ -388,9 +389,9 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
       context.textAlign = "left";
       context.textBaseline = "top";
       context.fillStyle = "#000000";
-      console.log(0);
+      // console.log(0);
       image = await loadImage(fileName);
-      console.log(1);
+      // console.log(1);
       context.drawImage(image, 0, 0, 1200, 600);
       var keys = Object.keys(abc);
       resObject = [];
@@ -480,7 +481,7 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
             },
           ],
         };
-        console.log(mailOptions);
+        console.log("qwerty", mailOptions);
         transport.sendMail(mailOptions, (error, info) => {
           if (error) {
             c1 = c1 + 1;
@@ -489,34 +490,6 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
           } else {
             console.log("Message sent: %s", info.messageId);
             c2 = c2 + 1;
-          }
-          if (c1 + c2 === json.length) {
-            if (c1 !== 0) {
-              var failList1 = Object.keys(resObject);
-              var failList = "";
-              for (var k = 0; k < c1; k++) {
-                failList = failList + "<li>" + failList1[k] + "</li>";
-              }
-              var transport = nodemailer.createTransport({
-                host: "smtp.elasticemail.com",
-                port: 2525,
-                auth: {
-                  user: "bewithkartik@gmail.com",
-                  pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
-                },
-              });
-              var mailOptions = {
-                from: "'ISAA Project' <bewithkartik@gmail.com>",
-                to: user.email,
-                subject: "Error in sending Certificate for " + xyz.name,
-                html:
-                  `<div><p>Email Could not be sent to the following Addresses provided in the CSV</p><list>` +
-                  failList +
-                  `</list></div>`,
-              };
-              console.log(mailOptions);
-              transport.sendMail(mailOptions, (error, info) => {});
-            }
           }
         });
       } catch (err) {
@@ -534,7 +507,7 @@ router.post("/student/putName/:docId", studentAuth, async (req, res) => {
     console.log(req.params.docId);
     var xyz = await Cert.find({ _id: ObjectId(req.params.docId) });
     xyz = xyz[0];
-    console.log("xyz", xyz);
+    // console.log("xyz", xyz);
     var abc = {};
     for (var i = 0; i < xyz.coordinates.length; i++) {
       abc[xyz.coordinates[i].fieldName] = {
@@ -544,7 +517,7 @@ router.post("/student/putName/:docId", studentAuth, async (req, res) => {
         height: xyz.coordinates[i].height,
       };
     }
-    console.log(abc);
+    // console.log(abc);
     var user = await Student.findOne({ _id: req.user.id });
     const width = 1200;
     const height = 600;
@@ -557,7 +530,7 @@ router.post("/student/putName/:docId", studentAuth, async (req, res) => {
       count: json.length,
       date: Date.now(),
     });
-    console.log(1, user);
+    // console.log(1, user);
     await user.save();
     console.log(2);
     var c1 = 0;
@@ -695,7 +668,7 @@ router.post("/student/putName/:docId", studentAuth, async (req, res) => {
                   failList +
                   `</list></div>`,
               };
-              console.log(mailOptions);
+              console.log("x,", mailOptions);
               transport.sendMail(mailOptions, (error, info) => {});
             }
           }
@@ -709,55 +682,81 @@ router.post("/student/putName/:docId", studentAuth, async (req, res) => {
     console.log(err);
   }
 });
-
+router.post("/verifyExistance/:docId", async (req, res) => {
+  try {
+    var xyz = await Verify.find({ _id: ObjectId(req.params.docId) });
+    console.log(xyz);
+    if (xyz.length > 0) {
+      xyz = xyz[0];
+      console.log(xyz);
+      return res.send("available");
+    } else {
+      // console.log(err);
+      res.status(400).send("Could not find Your Certificate");
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({ err });
+  }
+});
 router.get("/verify/:docId", async (req, res) => {
-  console.log(req.params.docId);
-  var xyz = await Verify.find({ _id: ObjectId(req.params.docId) });
-  xyz = xyz[0];
-  console.log("xyz", xyz);
-  var decoded = await axios.post(
-    url + "/api/decrypt",
-    {
-      token: xyz.token,
-    },
-    { "Content-Type": "application/json" }
-  );
-  console.log(decoded.data);
-  var zxc = await Cert.find({ _id: decoded.data.details.docId });
-  zxc = zxc[0];
-  var abc = {};
-  for (var i = 0; i < zxc.coordinates.length; i++) {
-    abc[zxc.coordinates[i].fieldName] = {
-      x: zxc.coordinates[i].x,
-      y: zxc.coordinates[i].y,
-      width: zxc.coordinates[i].width,
-      height: zxc.coordinates[i].height,
-    };
-  }
-  console.log(abc);
-  const width = 1200;
-  const height = 600;
-  var fileName = "./cert/" + zxc.cert;
-  var json = await csv().fromFile("./csv/" + zxc.csv);
-  console.log(json[0]);
-  var imageCaption = "Image caption";
-  var i = decoded.data.details.csvSerial;
-  var canvas = createCanvas(width, height);
-  var context = canvas.getContext("2d");
+  try {
+    console.log(req.params.docId);
+    var xyz = await Verify.find({ _id: ObjectId(req.params.docId) });
+    try {
+      xyz = xyz[0];
+    } catch (err) {
+      console.log(err);
+      res.status(400).send("Could not find Your Certificate");
+    }
+    console.log("xyz", xyz);
+    var decoded = await axios.post(
+      url + "/api/decrypt",
+      {
+        token: xyz.token,
+      },
+      { "Content-Type": "application/json" }
+    );
+    console.log(decoded.data);
+    var zxc = await Cert.find({ _id: decoded.data.details.docId });
+    zxc = zxc[0];
+    var abc = {};
+    for (var i = 0; i < zxc.coordinates.length; i++) {
+      abc[zxc.coordinates[i].fieldName] = {
+        x: zxc.coordinates[i].x,
+        y: zxc.coordinates[i].y,
+        width: zxc.coordinates[i].width,
+        height: zxc.coordinates[i].height,
+      };
+    }
+    console.log(abc);
+    const width = 1200;
+    const height = 600;
+    var fileName = "./cert/" + zxc.cert;
+    var json = await csv().fromFile("./csv/" + zxc.csv);
+    console.log(json[0]);
+    var imageCaption = "Image caption";
+    var i = decoded.data.details.csvSerial;
+    var canvas = createCanvas(width, height);
+    var context = canvas.getContext("2d");
 
-  context.textAlign = "left";
-  context.textBaseline = "top";
-  context.fillStyle = "#000000";
+    context.textAlign = "left";
+    context.textBaseline = "top";
+    context.fillStyle = "#000000";
 
-  image = await loadImage(fileName);
-  context.drawImage(image, 0, 0, 1200, 600);
-  var keys = Object.keys(abc);
-  for (var j = 0; j < keys.length; j++) {
-    context.font = "bold " + abc[keys[j]].height + "px Roboto-Bold";
-    context.fillText(json[i][keys[j]], abc[keys[j]].x, abc[keys[j]].y);
+    image = await loadImage(fileName);
+    context.drawImage(image, 0, 0, 1200, 600);
+    var keys = Object.keys(abc);
+    for (var j = 0; j < keys.length; j++) {
+      context.font = "bold " + abc[keys[j]].height + "px Roboto-Bold";
+      context.fillText(json[i][keys[j]], abc[keys[j]].x, abc[keys[j]].y);
+    }
+    var imgData = canvas.toBuffer("image/png");
+    return res.send(imgData);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send(err);
   }
-  var imgData = canvas.toBuffer("image/png");
-  return res.send(imgData);
 });
 
 router.post("/teacher/saveCSV", teacherAuth, async (req, res) => {
