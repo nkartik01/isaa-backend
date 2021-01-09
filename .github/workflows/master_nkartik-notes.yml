@@ -31,5 +31,5 @@ jobs:
       with:
         app-name: 'nkartik-notes'
         slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_3488522b767143f6ac295da88f8f821e }}
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_0d8d65c7ec8440c79d57c3c6753ed71f }}
         package: .
