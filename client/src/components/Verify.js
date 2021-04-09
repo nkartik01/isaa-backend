@@ -9,7 +9,13 @@ class Verify extends React.Component {
       var res = await axios.post(
         "/api/verifyExistance/" + this.props.match.params.id
       );
-      var res = await axios.post("/api/verify/" + this.props.match.params.id);
+      console.log(res.data);
+    } catch (err) {
+      this.setState({ isLoading: false });
+      console.log(err.response, err);
+    }
+    try {
+      res = await axios.get("/api/verify/" + this.props.match.params.id);
       console.log(res.data);
       this.setState({ isLoading: false, found: true });
     } catch (err) {
@@ -28,7 +34,7 @@ class Verify extends React.Component {
             {this.state.found ? (
               <img src={"/api/verify/" + this.props.match.params.id}></img>
             ) : (
-              <p>The link is bogus</p>
+              <p>The link is bogus or Data Tampered</p>
             )}
           </Fragment>
         ) : (

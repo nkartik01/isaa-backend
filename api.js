@@ -21,17 +21,14 @@ const Student = require("./models/Student");
 const adminAuth = require("./middleware/adminAuth");
 const studentAuth = require("./middleware/studentAuth");
 // const url = "https://isaa-backend--nkartik.repl.co";
-const url = "http://localhost:5000";
+const url = "http://localhost:8080";
 registerFont("./Roboto/Roboto-Bold.ttf", { family: "Roboto-Bold" });
 router.post("/adminLogin", async (req, res) => {
   try {
     var { user, password } = req.body;
     // console.log(user, password);
     if (user === config.get("adminUser")) {
-      const ismatch = await bcryptjs.compare(
-        password,
-        config.get("adminPassword")
-      );
+      const ismatch = await bcryptjs.compare(password, config.get("adminPassword"));
       if (!ismatch) {
         res.status(400).json({ errors: [{ msg: "Invalid Credentials" }] });
       }
@@ -61,11 +58,9 @@ router.post(
     [
       check("name", "Name is required").not().isEmpty(),
       check("email", "Enter a valid email").isEmail(),
-      check("password", "Password must be atleast 6 characters long.").isLength(
-        {
-          min: 6,
-        }
-      ),
+      check("password", "Password must be atleast 6 characters long.").isLength({
+        min: 6,
+      }),
     ],
   ],
   async (req, res) => {
@@ -78,9 +73,7 @@ router.post(
     try {
       var user1 = await Teacher.findOne({ email });
       if (user1) {
-        return res
-          .status(400)
-          .json({ errors: [{ msg: "User already exists" }] });
+        return res.status(400).json({ errors: [{ msg: "User already exists" }] });
       }
       user = new Teacher({
         name,
@@ -116,11 +109,9 @@ router.post(
     [
       check("name", "Name is required").not().isEmpty(),
       check("email", "Enter a valid email").isEmail(),
-      check("password", "Password must be atleast 6 characters long.").isLength(
-        {
-          min: 6,
-        }
-      ),
+      check("password", "Password must be atleast 6 characters long.").isLength({
+        min: 6,
+      }),
     ],
   ],
   async (req, res) => {
@@ -133,9 +124,7 @@ router.post(
     try {
       var user1 = await Student.findOne({ email });
       if (user1) {
-        return res
-          .status(400)
-          .json({ errors: [{ msg: "User already exists" }] });
+        return res.status(400).json({ errors: [{ msg: "User already exists" }] });
       }
       user = new Student({
         name,
@@ -169,10 +158,7 @@ router.post(
 // @access Public
 router.post(
   "/teacherLogin",
-  [
-    check("email", "Enter a valid email").isEmail(),
-    check("password", "Password must be atleast 6 characters long.").exists(),
-  ],
+  [check("email", "Enter a valid email").isEmail(), check("password", "Password must be atleast 6 characters long.").exists()],
 
   async (req, res) => {
     const error = validationResult(req);
@@ -184,9 +170,7 @@ router.post(
       var user = await Teacher.findOne({ email });
       // console.log(user);
       if (!user) {
-        return res
-          .status(400)
-          .json({ errors: [{ msg: "Invalid Credentials" }] });
+        return res.status(400).json({ errors: [{ msg: "Invalid Credentials" }] });
       }
       // console.log(1);
       const ismatch = await bcryptjs.compare(password, user.password);
@@ -213,10 +197,7 @@ router.post(
 
 router.post(
   "/studentLogin",
-  [
-    check("email", "Enter a valid email").isEmail(),
-    check("password", "Password must be atleast 6 characters long.").exists(),
-  ],
+  [check("email", "Enter a valid email").isEmail(), check("password", "Password must be atleast 6 characters long.").exists()],
 
   async (req, res) => {
     const error = validationResult(req);
@@ -228,9 +209,7 @@ router.post(
       var user = await Student.findOne({ email });
       // console.log(user);
       if (!user) {
-        return res
-          .status(400)
-          .json({ errors: [{ msg: "Invalid Credentials" }] });
+        return res.status(400).json({ errors: [{ msg: "Invalid Credentials" }] });
       }
       // console.log(1);
       const ismatch = await bcryptjs.compare(password, user.password);
@@ -308,7 +287,11 @@ router.post("/encrypt", async (req, res) => {
 
 router.post("/decrypt", async (req, res) => {
   var i = 0;
-  var decoded = jwt.verify(req.body.token, "MySecretKey");
+  try {
+    var decoded = jwt.verify(req.body.token, "MySecretKey");
+  } catch (err) {
+    res.status(400).send("Database Tempered");
+  }
   var result = await axios.post(
     url + "/api/encrypt",
     {
@@ -329,16 +312,11 @@ router.post("/decrypt", async (req, res) => {
           if (typeof decoded.details[keys[i]] === "object") {
             var keys2 = Object.keys(decoded.details[keys[i]]);
             for (var j = 0; j < keys2.length; j++) {
-              if (
-                decoded.details[keys[i]][keys2[j]] !==
-                decoded2.details[keys[i]][keys2[j]]
-              ) {
+              if (decoded.details[keys[i]][keys2[j]] !== decoded2.details[keys[i]][keys2[j]]) {
                 return res.status(400).json({ msg: "wrong info" });
               }
             }
-            console.log(
-              keys[i] + " verified " + decoded.details[keys[i]][keys2[j]]
-            );
+            console.log(keys[i] + " verified " + decoded.details[keys[i]][keys2[j]]);
           }
         } else {
           console.log(keys[i] + " verified " + decoded.details[keys[i]]);
@@ -365,12 +343,14 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
         height: xyz.coordinates[i].height,
       };
     }
+    registerFont("Cinzel-Bold.ttf", { family: "Cinzel-Bold" });
+
     // console.log(abc);
     var user = await Teacher.findOne({ _id: req.user.id });
     const width = 1200;
     const height = 600;
     var fileName = "./cert/" + xyz.cert;
-    console.log(1);
+    // console.log(1);
     var json = await csv().fromFile("./csv/" + xyz.csv);
     // console.log(json[0]);
     user.certs.unshift({
@@ -378,17 +358,31 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
       count: json.length,
       date: Date.now(),
     });
-    console.log(1, user);
+
+    var transport = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      auth: {
+        user: "zbcvitc@gmail.com",
+        pass: "zbc@1233",
+      },
+    });
+    // console.log(1, user);
     await user.save();
-    console.log(2);
+    // console.log(2);
     var c1 = 0;
     var c2 = 0;
+    const delay = (millis) =>
+      new Promise((resolve, reject) => {
+        setTimeout((_) => resolve(), millis);
+      });
     for (var i = 0; i < json.length; i++) {
+      await delay(1000);
       var canvas = createCanvas(width, height);
       var context = canvas.getContext("2d");
       context.textAlign = "left";
       context.textBaseline = "top";
-      context.fillStyle = "#000000";
+      context.fillStyle = "#ffffff";
       // console.log(0);
       image = await loadImage(fileName);
       // console.log(1);
@@ -396,88 +390,82 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
       var keys = Object.keys(abc);
       resObject = [];
       for (var j = 0; j < keys.length; j++) {
-        context.font = "bold " + abc[keys[j]].height + "px Roboto-Bold";
+        context.font = "" + abc[keys[j]].height + "px Cinzel-Bold";
         // console.log(abc[keys[j]].height);
         context.fillText(json[i][keys[j]], abc[keys[j]].x, abc[keys[j]].y);
       }
       var imgData = canvas.toBuffer("image/png");
       // console.log(imgData);
-      var pdfContent = new jsPDF({
-        orientation: "l",
-        unit: "mm",
-        format: [297, 210],
-      });
-      var ret = pdfContent.addImage(imgData, "PNG", 3, 3, 291, 200);
-      var body = {
-        details: {
-          csvFile: "./csv/" + xyz.csv,
-          certFile: fileName,
-          csvSerial: i,
-          docId: req.params.docId,
-        },
-      };
-      var res1 = await axios.post(url + "/api/encrypt", body, {
-        "Content-Type": "application/json",
-      });
-      var token = res1.data.jwt;
-      var ver = new Verify({ token: token });
-      await ver.save();
-      pdfContent.textWithLink(
-        "Click here to Verify the Certificate",
-        200,
-        210,
-        {
-          url: url + "/#/verify/" + ver._id,
-        }
-      );
-      var data = new Buffer(pdfContent.output("arraybuffer"));
-      await PDFNet.initialize();
-      const doc = await PDFNet.PDFDoc.createFromBuffer(data);
-      doc.initSecurityHandler();
-      console.log("PDFNet and PDF document initialized and locked");
-      const sigHandlerId = await doc.addStdSignatureHandlerFromFile(
-        "./ISAA.pfx",
-        "@Kartik01"
-      );
-      const sigField = await doc.fieldCreate(
-        "Signature1",
-        PDFNet.Field.Type.e_signature
-      );
-      const page1 = await doc.getPage(1);
-      const widgetAnnot = await PDFNet.WidgetAnnot.create(
-        await doc.getSDFDoc(),
-        await PDFNet.Rect.init(0, 0, 0, 0),
-        sigField
-      );
-      page1.annotPushBack(widgetAnnot);
-      widgetAnnot.setPage(page1);
-      const widgetObj = await widgetAnnot.getSDFObj();
-      widgetObj.putNumber("F", 132);
-      widgetObj.putName("Type", "Annot");
-      const sigDict = await sigField.useSignatureHandler(sigHandlerId);
-      sigDict.putName("SubFilter", "adbe.pkcs7.detached");
-      sigDict.putString("Name", "VITC_ISAA");
-      data = await doc.saveMemoryBuffer(PDFNet.SDFDoc.SaveOptions.e_linearized);
-      console.log("hi");
+      // var pdfContent = new jsPDF({
+      //   orientation: "l",
+      //   unit: "mm",
+      //   format: [297, 210],
+      // });
+      // var ret = pdfContent.addImage(imgData, "PNG", 3, 3, 291, 200);
+      // var body = {
+      //   details: {
+      //     csvFile: "./csv/" + xyz.csv,
+      //     certFile: fileName,
+      //     csvSerial: i,
+      //     docId: req.params.docId,
+      //   },
+      // };
+      // var res1 = await axios.post(url + "/api/encrypt", body, {
+      //   "Content-Type": "application/json",
+      // });
+      // var token = res1.data.jwt;
+      // var ver = new Verify({ token: token });
+      // await ver.save();
+      // // pdfContent.textWithLink(
+      // //   "Click here to Verify the Certificate",
+      // //   200,
+      // //   210,
+      // //   {
+      // //     url: url + "/#/verify/" + ver._id,
+      // //   }
+      // // );
+      // var data = new Buffer(pdfContent.output("arraybuffer"));
+      // await PDFNet.initialize();
+      // const doc = await PDFNet.PDFDoc.createFromBuffer(data);
+      // doc.initSecurityHandler();
+      // // console.log("PDFNet and PDF document initialized and locked");
+      // const sigHandlerId = await doc.addStdSignatureHandlerFromFile(
+      //   "./ISAA.pfx",
+      //   "@Kartik01"
+      // );
+      // const sigField = await doc.fieldCreate(
+      //   "Signature1",
+      //   PDFNet.Field.Type.e_signature
+      // );
+      // const page1 = await doc.getPage(1);
+      // const widgetAnnot = await PDFNet.WidgetAnnot.create(
+      //   await doc.getSDFDoc(),
+      //   await PDFNet.Rect.init(0, 0, 0, 0),
+      //   sigField
+      // );
+      // page1.annotPushBack(widgetAnnot);
+      // widgetAnnot.setPage(page1);
+      // const widgetObj = await widgetAnnot.getSDFObj();
+      // widgetObj.putNumber("F", 132);
+      // widgetObj.putName("Type", "Annot");
+      // const sigDict = await sigField.useSignatureHandler(sigHandlerId);
+      // sigDict.putName("SubFilter", "adbe.pkcs7.detached");
+      // sigDict.putString("Name", "VITC_ISAA");
+      // data = await doc.saveMemoryBuffer(PDFNet.SDFDoc.SaveOptions.e_linearized);
+      // console.log("hi");
       try {
-        var transport = nodemailer.createTransport({
-          host: "smtp.elasticemail.com",
-          port: 2525,
-          auth: {
-            user: "bewithkartik@gmail.com",
-            pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
-          },
-        });
         var mailOptions = {
-          from: "'ISAA Project' <bewithkartik@gmail.com>",
+          from: "'Zero Bugs Club' <zbcvitc@gmail.com>",
           to: json[i].email,
-          subject: "Your Certificate for " + xyz.name,
-          html: `<p>${xyz.msg}</p>`,
+          subject: "Your Ticket for " + xyz.name,
+          html: `<html><body align="center"><div style="width:60%"><h4>Resume Building Workshop</h4><br/><p>Greetings! <br/>
+First of all, We would like to take a moment to thank you all for showing your tremendous support and love for our event. Your support will keep us highly motivated, so that we can bring many more amazing events and opportunities in future.
+<br/>Please find your ticket to the Resume Building Workshop in attachment. Find the Google meet code and QR to join the meet. You can alternatively join the event using the button below</p><br/><a href="https://meet.google.com/avw-eawn-omf"><button>Join the workshop</button></a></div></body></html>`,
           attachments: [
             {
-              filename: "cert.pdf",
-              content: data,
-              contentType: "application/vnd.pdf",
+              filename: "ticket.png",
+              content: imgData,
+              contentType: "image/png",
             },
           ],
         };
@@ -488,7 +476,7 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
             console.log(error);
             resObject[mailOptions.to] = "Not Sent";
           } else {
-            console.log("Message sent: %s", info.messageId);
+            console.log("Message sent: %s", mailOptions.to);
             c2 = c2 + 1;
           }
         });
@@ -554,83 +542,83 @@ router.post("/student/putName/:docId", studentAuth, async (req, res) => {
       }
       var imgData = canvas.toBuffer("image/png");
       // console.log(imgData);
-      var pdfContent = new jsPDF({
-        orientation: "l",
-        unit: "mm",
-        format: [297, 210],
-      });
-      var ret = pdfContent.addImage(imgData, "PNG", 3, 3, 291, 200);
-      var body = {
-        details: {
-          csvFile: "./csv/" + xyz.csv,
-          certFile: fileName,
-          csvSerial: i,
-          docId: req.params.docId,
-        },
-      };
-      var res1;
-      res1 = await axios.post(url + "/api/encrypt", body, {
-        "Content-Type": "application/json",
-      });
-      var token = res1.data.jwt;
-      var ver = new Verify({ token: token });
-      await ver.save();
-      pdfContent.textWithLink(
-        "Click here to Verify the Certificate",
-        200,
-        210,
-        {
-          url: url + "/#/verify/" + ver._id,
-        }
-      );
-      var data = new Buffer(pdfContent.output("arraybuffer"));
-      await PDFNet.initialize();
-      const doc = await PDFNet.PDFDoc.createFromBuffer(data);
-      doc.initSecurityHandler();
-      console.log("PDFNet and PDF document initialized and locked");
-      const sigHandlerId = await doc.addStdSignatureHandlerFromFile(
-        "./ISAA.pfx",
-        "@Kartik01"
-      );
-      const sigField = await doc.fieldCreate(
-        "Signature1",
-        PDFNet.Field.Type.e_signature
-      );
-      const page1 = await doc.getPage(1);
-      const widgetAnnot = await PDFNet.WidgetAnnot.create(
-        await doc.getSDFDoc(),
-        await PDFNet.Rect.init(0, 0, 0, 0),
-        sigField
-      );
-      page1.annotPushBack(widgetAnnot);
-      widgetAnnot.setPage(page1);
-      const widgetObj = await widgetAnnot.getSDFObj();
-      widgetObj.putNumber("F", 132);
-      widgetObj.putName("Type", "Annot");
-      const sigDict = await sigField.useSignatureHandler(sigHandlerId);
-      sigDict.putName("SubFilter", "adbe.pkcs7.detached");
-      sigDict.putString("Name", "VITC_ISAA");
-      data = await doc.saveMemoryBuffer(PDFNet.SDFDoc.SaveOptions.e_linearized);
-      console.log("hi");
+      // var pdfContent = new jsPDF({
+      //   orientation: "l",
+      //   unit: "mm",
+      //   format: [297, 210],
+      // });
+      // var ret = pdfContent.addImage(imgData, "PNG", 3, 3, 291, 200);
+      // var body = {
+      //   details: {
+      //     csvFile: "./csv/" + xyz.csv,
+      //     certFile: fileName,
+      //     csvSerial: i,
+      //     docId: req.params.docId,
+      //   },
+      // };
+      // var res1;
+      // res1 = await axios.post(url + "/api/encrypt", body, {
+      //   "Content-Type": "application/json",
+      // });
+      // var token = res1.data.jwt;
+      // var ver = new Verify({ token: token });
+      // await ver.save();
+      // pdfContent.textWithLink(
+      //   "Click here to Verify the Certificate",
+      //   200,
+      //   210,
+      //   {
+      //     url: url + "/#/verify/" + ver._id,
+      //   }
+      // );
+      // var data = new Buffer(pdfContent.output("arraybuffer"));
+      // await PDFNet.initialize();
+      // const doc = await PDFNet.PDFDoc.createFromBuffer(data);
+      // doc.initSecurityHandler();
+      // console.log("PDFNet and PDF document initialized and locked");
+      // const sigHandlerId = await doc.addStdSignatureHandlerFromFile(
+      //   "./ISAA.pfx",
+      //   "@Kartik01"
+      // );
+      // const sigField = await doc.fieldCreate(
+      //   "Signature1",
+      //   PDFNet.Field.Type.e_signature
+      // );
+      // const page1 = await doc.getPage(1);
+      // const widgetAnnot = await PDFNet.WidgetAnnot.create(
+      //   await doc.getSDFDoc(),
+      //   await PDFNet.Rect.init(0, 0, 0, 0),
+      //   sigField
+      // );
+      // page1.annotPushBack(widgetAnnot);
+      // widgetAnnot.setPage(page1);
+      // const widgetObj = await widgetAnnot.getSDFObj();
+      // widgetObj.putNumber("F", 132);
+      // widgetObj.putName("Type", "Annot");
+      // const sigDict = await sigField.useSignatureHandler(sigHandlerId);
+      // sigDict.putName("SubFilter", "adbe.pkcs7.detached");
+      // sigDict.putString("Name", "VITC_ISAA");
+      // data = await doc.saveMemoryBuffer(PDFNet.SDFDoc.SaveOptions.e_linearized);
+      // console.log("hi");
       try {
         var transport = nodemailer.createTransport({
-          host: "smtp.elasticemail.com",
-          port: 2525,
+          host: "smtp.gmail.com",
+          port: 587,
           auth: {
-            user: "bewithkartik@gmail.com",
-            pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
+            user: "zbcvitc@gmail.com",
+            pass: "zbc@1233",
           },
         });
         var mailOptions = {
-          from: "'bewithkartik' <bewithkartik@gmail.com>",
+          from: "'Zero Bugs Club' <zbcvitc@gmail.com>",
           to: json[i].email,
-          subject: "Your Certificate for " + xyz.name,
+          subject: "Your Ticket for Resume Building Workshop",
           html: `<p>${xyz.msg}</p>`,
           attachments: [
             {
-              filename: "cert.pdf",
-              content: data,
-              contentType: "application/vnd.pdf",
+              filename: "ticket.png",
+              content: imgData,
+              contentType: "image/png",
             },
           ],
         };
@@ -663,10 +651,7 @@ router.post("/student/putName/:docId", studentAuth, async (req, res) => {
                 from: "'bewithkartik' <bewithkartik@gmail.com>",
                 to: user.email,
                 subject: "Error in sending Certificate for " + xyz.name,
-                html:
-                  `<div><p>Email Could not be sent to the following Addresses provided in the CSV</p><list>` +
-                  failList +
-                  `</list></div>`,
+                html: `<div><p>Email Could not be sent to the following Addresses provided in the CSV</p><list>` + failList + `</list></div>`,
               };
               console.log("x,", mailOptions);
               transport.sendMail(mailOptions, (error, info) => {});
@@ -710,14 +695,20 @@ router.get("/verify/:docId", async (req, res) => {
       res.status(400).send("Could not find Your Certificate");
     }
     console.log("xyz", xyz);
-    var decoded = await axios.post(
-      url + "/api/decrypt",
-      {
-        token: xyz.token,
-      },
-      { "Content-Type": "application/json" }
-    );
-    console.log(decoded.data);
+    var decoded;
+    try {
+      decoded = await axios.post(
+        url + "/api/decrypt",
+        {
+          token: xyz.token,
+        },
+        { "Content-Type": "application/json" }
+      );
+    } catch (err) {
+      console.log(err);
+      res.status(400).send("Data morphed");
+    }
+    console.log(730, decoded.data);
     var zxc = await Cert.find({ _id: decoded.data.details.docId });
     zxc = zxc[0];
     var abc = {};
@@ -737,10 +728,12 @@ router.get("/verify/:docId", async (req, res) => {
     console.log(json[0]);
     var imageCaption = "Image caption";
     var i = decoded.data.details.csvSerial;
+
+    registerFont("Cinzel-Bold.ttf", { family: "Cinzel-Bold" });
     var canvas = createCanvas(width, height);
     var context = canvas.getContext("2d");
 
-    context.textAlign = "left";
+    context.textAlign = "center";
     context.textBaseline = "top";
     context.fillStyle = "#000000";
 
@@ -748,7 +741,10 @@ router.get("/verify/:docId", async (req, res) => {
     context.drawImage(image, 0, 0, 1200, 600);
     var keys = Object.keys(abc);
     for (var j = 0; j < keys.length; j++) {
-      context.font = "bold " + abc[keys[j]].height + "px Roboto-Bold";
+      context.font = " " + abc[keys[j]].height + "px Cinzel-Bold";
+      if (decoded.data.details.userData[keys[j]] !== json[i][keys[j]]) {
+        return res.status(400).send("CSV tampered");
+      }
       context.fillText(json[i][keys[j]], abc[keys[j]].x, abc[keys[j]].y);
     }
     var imgData = canvas.toBuffer("image/png");
@@ -764,14 +760,11 @@ router.post("/teacher/saveCSV", teacherAuth, async (req, res) => {
     console.log(req.files.csv);
     var file = req.files.csv;
     var dt = new Date().getTime();
-    var uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
-      /[xy]/g,
-      function (c) {
-        var r = (dt + Math.random() * 16) % 16 | 0;
-        dt = Math.floor(dt / 16);
-        return (c == "x" ? r : (r & 0x3) | 0x8).toString(16);
-      }
-    );
+    var uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = (dt + Math.random() * 16) % 16 | 0;
+      dt = Math.floor(dt / 16);
+      return (c == "x" ? r : (r & 0x3) | 0x8).toString(16);
+    });
     console.log(uuid);
     var q = `./csv/${uuid}.csv`;
     console.log(q, typeof q, file.data);
@@ -800,14 +793,11 @@ router.post("/student/saveCSV", studentAuth, async (req, res) => {
     console.log(req.files.csv);
     var file = req.files.csv;
     var dt = new Date().getTime();
-    var uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
-      /[xy]/g,
-      function (c) {
-        var r = (dt + Math.random() * 16) % 16 | 0;
-        dt = Math.floor(dt / 16);
-        return (c == "x" ? r : (r & 0x3) | 0x8).toString(16);
-      }
-    );
+    var uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = (dt + Math.random() * 16) % 16 | 0;
+      dt = Math.floor(dt / 16);
+      return (c == "x" ? r : (r & 0x3) | 0x8).toString(16);
+    });
     console.log(uuid);
     var q = `./csv/${uuid}.csv`;
     console.log(q, typeof q, file.data);
@@ -948,12 +938,7 @@ router.get("/getPersonalReport", teacherAuth, async (req, res) => {
     }
     var report = { date: {} };
     for (var i = 0; i < user.certs.length; i++) {
-      var date =
-        user.certs[i].date.getDate() +
-        "-" +
-        user.certs[i].date.getMonth() +
-        "-" +
-        user.certs[i].date.getFullYear();
+      var date = user.certs[i].date.getDate() + "-" + user.certs[i].date.getMonth() + "-" + user.certs[i].date.getFullYear();
       if (!report.date[date]) {
         report.date[date] = [];
       }
@@ -973,15 +958,9 @@ router.get("/getSchoolReport/:school", async (req, res) => {
     for (var i = 0; i < users.length; i++) {
       report.user[users[i].name] = users[i].certs;
       for (var j = 0; j < users[i].certs.length; j++) {
-        var date =
-          users[i].certs[j].date.getDate() +
-          "-" +
-          users[i].certs[j].date.getMonth() +
-          "-" +
-          users[i].certs[j].date.getFullYear();
+        var date = users[i].certs[j].date.getDate() + "-" + users[i].certs[j].date.getMonth() + "-" + users[i].certs[j].date.getFullYear();
         if (!report.date[date]) report.date[date] = {};
-        if (!report.date[date][users[i].name])
-          report.date[date][users[i].name] = [];
+        if (!report.date[date][users[i].name]) report.date[date][users[i].name] = [];
         report.date[date][users[i].name].unshift(users[i].certs[j]);
       }
     }
