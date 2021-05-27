@@ -24,8 +24,8 @@ class App extends React.Component {
       <div className="App">
         <header className="App-header">
           <h2>Kartik Narang 18BCE1199</h2>
-          <h2>Varsha Ramesh 18BCE1344</h2>
-          <h2>Adarsh Sahu 18BCE1029</h2>
+          <h2>Sumit Ajmera 18BCE1233</h2>
+          <h2>Aadhitya Swarnesh 18BCE1087</h2>
           <Router>
             <Switch>
               <Route path="/" exact component={Landing}></Route>

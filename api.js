@@ -461,11 +461,11 @@ router.post("/teacher/putName/:docId", teacherAuth, async (req, res) => {
       console.log("hi");
       try {
         var transport = nodemailer.createTransport({
-          host: "smtp.elasticemail.com",
-          port: 2525,
+          service:"gmail",
+          host: "smtp.gmail.com",
           auth: {
             user: "bewithkartik@gmail.com",
-            pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
+            pass: "vxhzfpfjvhgcqijp",
           },
         });
         var mailOptions = {
@@ -614,11 +614,11 @@ router.post("/student/putName/:docId", studentAuth, async (req, res) => {
       console.log("hi");
       try {
         var transport = nodemailer.createTransport({
-          host: "smtp.elasticemail.com",
-          port: 2525,
+          service:"gmail",
+          host: "smtp.gmail.com",
           auth: {
             user: "bewithkartik@gmail.com",
-            pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
+            pass: "vxhzfpfjvhgcqijp",
           },
         });
         var mailOptions = {
@@ -652,11 +652,12 @@ router.post("/student/putName/:docId", studentAuth, async (req, res) => {
                 failList = failList + "<li>" + failList1[k] + "</li>";
               }
               var transport = nodemailer.createTransport({
-                host: "smtp.elasticemail.com",
-                port: 2525,
+                host: "smtp.gmail.com",
+    service:"gmail",            
+    
                 auth: {
                   user: "bewithkartik@gmail.com",
-                  pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
+                  pass: "vxhzfpfjvhgcqijp",
                 },
               });
               var mailOptions = {
@@ -862,11 +863,11 @@ router.get("/student/getFields/:csvFile", studentAuth, async (req, res) => {
 router.post("/sendMail/:email/:eventName/:msg", async (req, res) => {
   try {
     var transport = nodemailer.createTransport({
-      host: "smtp.elasticemail.com",
-      port: 2525,
+      service:"gmail",
+      host: "smtp.gmail.com",
       auth: {
         user: "bewithkartik@gmail.com",
-        pass: "B1EC82773F4AA49CAA967FB044E221FE6283",
+        pass: "vxhzfpfjvhgcqijp",
       },
     });
     var mailOptions = {

@@ -9,7 +9,7 @@ class Verify extends React.Component {
       var res = await axios.post(
         "/api/verifyExistance/" + this.props.match.params.id
       );
-      var res = await axios.post("/api/verify/" + this.props.match.params.id);
+      var res = await axios.get("/api/verify/" + this.props.match.params.id);
       console.log(res.data);
       this.setState({ isLoading: false, found: true });
     } catch (err) {
